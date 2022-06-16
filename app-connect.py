@@ -41,7 +41,7 @@ from collections import deque
 
 
 
-local_mqtt_sub_up = "lora/+/+/up"
+local_mqtt_sub_up = "lora/+/up"
 local_mqtt_sub_joined = "lora/+/joined"
 local_mqtt_down_topic = "lora/%s/down"
 
@@ -414,10 +414,10 @@ def app_publish_http(app, path, msg, retain=False):
                     logging.info(data)
                     sent = True
                     break
-            except (IOError, KeyboardInterrupt), e:
+            except (IOError, KeyboardInterrupt) as e:
                 print "Request exception", e
                 http_clients[app["eui"]].close()
-            except (BadStatusLine, ResponseNotReady, CannotSendRequest, CannotSendHeader, MemoryError), e:
+            except (BadStatusLine, ResponseNotReady, CannotSendRequest, CannotSendHeader, MemoryError) as e:
                 print "Response exception", e
                 http_clients[app["eui"]].close()
             finally:
@@ -473,6 +473,7 @@ def on_mqtt_message(client, userdata, msg):
 
     parts = msg.topic.split('/')
     appeui = ""
+    gweui = ""
     deveui = parts[1]
     event = parts[2]
 
@@ -480,21 +481,22 @@ def on_mqtt_message(client, userdata, msg):
         appeui = parts[1]
         deveui = parts[2]
         event = parts[3]
-
-    logging.info("Device eui: " + deveui + " App eui: " + appeui + " Event: " + event)
-
-    if event == "joined":
-        logging.info("Device joined " + deveui)
-
+    else:
         try:
+            logging.info("Getting appeui and gweui from payload")
             json_data = json.loads(msg.payload.decode("utf-8"))
 
-            logging.info("App eui: " + json_data["appeui"])
             appeui = json_data["appeui"]
             gweui = json_data["gweui"]
         except ValueError:
             logging.info('Decoding JSON has failed')
             return
+
+
+    logging.info("Device eui: " + deveui + " App eui: " + appeui + " Event: " + event)
+
+    if event == "joined":
+        logging.info("Device joined " + deveui)
 
         if appeui not in apps:
             stream = os.popen('lora-query -x appnet get ' + appeui)
@@ -622,10 +624,10 @@ def http_downlink_thread(appeui):
                         data = res.read()
                         logging.info("API Response: " + data)
                         break
-                except (IOError, KeyboardInterrupt), e:
+                except (IOError, KeyboardInterrupt) as e:
                     print "Exception during request GET", e
                     http_clients[appeui].close()
-                except (BadStatusLine, ResponseNotReady, CannotSendRequest, CannotSendHeader, MemoryError), e:
+                except (BadStatusLine, ResponseNotReady, CannotSendRequest, CannotSendHeader, MemoryError) as e:
                     print "Exception during GET response", e
                     http_clients[appeui].close()
                 finally:
